@@ -1,12 +1,21 @@
 <?php
-require('config.php');
-require('auc.php');
+$me=2;
+define (LANG	,'RU');
+
+##############
+require('config/config.php');
+require('kernel/auc.php');
+require_once('lang/'.LANG.'.php');
 mysql_connect(DB_AUC_HOST, DB_AUC_USER, DB_AUC_PASS);
 mysql_select_db(DB_AUC_BASE);
+#die(DB_AUC_BASE);
 $UI = new CustomUserInterface();
-$me=2;
-#$b  = new Balance($me);var_dump($b->Replenish(1000));
 $A = new CharAuctionhouse($me);
+$tmp	= $A->Error->GetLast();
+if (!empty($tmp))
+	{
+	$UI->ShowMessage($tmp);
+	}
 $A->CheckExpired();
 if (isset($_GET['add']))
 	{
@@ -14,18 +23,18 @@ if (isset($_GET['add']))
 		{
 		if ($A->CreateAuction($_GET['guid'],$_GET['startbid'],$_GET['expires'],$_GET['buyout']))
 			{
-			$UI->ShowMessage('аукцион создан');
+			$UI->ShowMessage(MSG_AUCTION_CREATE_OK);
 			$UI->mysqlTransactionCommit();
 			}
 		else
 			{
-			$UI->ShowMessage('ошибка создания аукциона: '.$A->Error->GetLast());
+			$UI->ShowMessage(MSG_AUCTION_CREATE_ERROR.': '.addslashes($A->Error->GetLast()));
 			$UI->mysqlTransactionRollback();
 			}
 		}
 	else
 		{
-		$UI->ShowMessage('ошибка начала транзакции');
+		$UI->ShowMessage(MSG_TRANSACTION_START_ERROR);
 		}
 	}
 if (isset($_GET['cancelmy']))
@@ -34,18 +43,18 @@ if (isset($_GET['cancelmy']))
 		{
 		if ($A->CancelMyAuction($_GET['guid']))
 			{
-			$UI->ShowMessage('аукцион отменен');
+			$UI->ShowMessage(MSG_AUCTION_CANCEL_OK);
 			$UI->mysqlTransactionCommit();
 			}
 		else
 			{
-			$UI->ShowMessage('ошибка отмены аукциона: '.$A->Error->GetLast());
+			$UI->ShowMessage(MSG_AUCTION_CANCEL_ERROR.': '.addslashes($A->Error->GetLast()));
 			$UI->mysqlTransactionRollback();
 			}
 		}
 	else
 		{
-		$UI->ShowMessage('ошибка начала транзакции');
+		$UI->ShowMessage(MSG_TRANSACTION_START_ERROR);
 		}
 	}
 
@@ -55,18 +64,18 @@ if (isset($_GET['dobuyout']))
 		{
 		if ($A->Buyout($_GET['guid']))
 			{
-			$UI->ShowMessage('персонаж выкуплен');
+			$UI->ShowMessage(MSG_AUCTION_BYUOUT_OK);
 			$UI->mysqlTransactionCommit();
 			}
 		else
 			{
-			$UI->ShowMessage('ошибка выкупа персонажа: '.$A->Error->GetLast());
+			$UI->ShowMessage(MSG_AUCTION_BYUOUT_ERROR.': '.addslashes($A->Error->GetLast()));
 			$UI->mysqlTransactionRollback();
 			}
 		}
 	else
 		{
-		$UI->ShowMessage('ошибка начала транзакции');
+		$UI->ShowMessage(MSG_TRANSACTION_START_ERROR);
 		}
 	}
 if (isset($_GET['dobid']))
@@ -75,18 +84,18 @@ if (isset($_GET['dobid']))
 		{
 		if ($A->Bid($_GET['guid'],$_GET['bid']))
 			{
-			$UI->ShowMessage('ставка принята');
+			$UI->ShowMessage(MSG_AUCTION_BID_OK);
 			$UI->mysqlTransactionCommit();
 			}
 		else
 			{
-			$UI->ShowMessage('ошибка ставки: '.$A->Error->GetLast());
+			$UI->ShowMessage(MSG_AUCTION_BID_ERROR.': '.addslashes($A->Error->GetLast()));
 			$UI->mysqlTransactionRollback();
 			}
 		}
 	else
 		{
-		$UI->ShowMessage('ошибка начала транзакции');
+		$UI->ShowMessage(MSG_TRANSACTION_START_ERROR);
 		}
 	}
 #создаем ПРОИЗВОЛЬНУЮ ссылку
@@ -98,9 +107,22 @@ $UI->CreateCustomAuctionCol('столбец','пример{$name}');
 $UI->CreateCustomAuctionCol('userbar','<img src="http://крутой-сервер/userbar/{$name}.png">');
 $UI->ShowAuctions($A->GetAuction());
 ?>
-<form action = "index.php">
+<script language="JavaScript" src="js/calendar_db_ru.js"></script>
+<link rel="stylesheet" href="css/calendar.css">
+
+<form name="addform" action = "index.php">
 guid:<input type="text" name="guid">
-expires:<input type="text" name="expires" value="2011-04-01">
+expires:<input type="text" name="expires" id="expires" value="">
+<script language="JavaScript">
+var m_expires = document.getElementById("expires");
+var tmp = new Date();
+tmp.setDate(tmp.getDate()+3);
+m_expires.value = f_tcalGenerDate(tmp);
+new tcal ({
+'formname': 'addform',
+'controlname': 'expires'
+});
+</script>
 startbid:<input type="text" name="startbid">
 buyout:<input type="text" name="buyout">
 <input type="submit" name="add" value="добавить аукцион">

@@ -9,31 +9,51 @@ class Log
 	const LEVEL_NOTIFY	= 1;
 	const LEVEL_ERROR	= 2;
 	const LEVEL_DEBUG	= 3;
+	const LEVEL_ELSE	= -1;
+	const LEVEL_ALL		= -2;
 	const LOGS_DIR		= LOGS_DIR;
+	protected $path;
 	protected $account;
+	public function CheckLogsPath()
+		{
+		if (!is_writable(self::LOGS_DIR))
+			{
+			/*может, созданы и доступны для записи файлы?*/
+			if (is_writable($path[self::LEVEL_STRING])
+			&& is_writable($path[self::LEVEL_NOTIFY])
+			&& is_writable($path[self::LEVEL_ERROR])
+			&& is_writable($path[self::LEVEL_DEBUG])
+			&& is_writable($path[self::LEVEL_ELSE])
+			&& is_writable($path[self::LEVEL_ALL])
+			)
+				return true;
+			return false;
+			}
+		return true;
+		}
 	public function Write($str,$level=0)
 		{
 		switch ($level)
 			{
 			case self::LEVEL_STRING:
-			$fp	= fopen(self::LOGS_DIR.'/string.log','a');
+			$fp	= fopen($this->path[self::LEVEL_STRING],'a');
 			break;
 			case self::LEVEL_NOTIFY:
-			$fp	= fopen(self::LOGS_DIR.'/notify.log','a');
+			$fp	= fopen($this->path[self::LEVEL_NOTIFY],'a');
 			break;
 			case self::LEVEL_ERROR:
-			$fp	= fopen(self::LOGS_DIR.'/error.log','a');
+			$fp	= fopen($this->path[self::LEVEL_ERROR],'a');
 			break;
 			case self::LEVEL_DEBUG:
-			$fp	= fopen(self::LOGS_DIR.'/debug.log','a');
+			$fp	= fopen($this->path[self::LEVEL_DEBUG],'a');
 			break;
 			default:
-			$fp	= fopen(self::LOGS_DIR.'/else.log','a');
+			$fp	= fopen($this->path[self::LEVEL_ELSE],'a');
 			}
 		$str	= date('Y-m-d H:i:s').'['.$this->account.']['.$_SERVER['REMOTE_ADDR'].']['.$level.']	'.$str."\n";
 		fputs($fp,$str);
 		fclose ($fp);
-		$fpAll	= fopen(self::LOGS_DIR.'/all.log','a');
+		$fpAll	= fopen($this->path[self::LEVEL_ALL],'a');
 		fputs($fpAll,$str);
 		fclose ($fpAll);
 		}
@@ -56,6 +76,12 @@ class Log
 	function __construct($account = 0)
 		{
 		$this->account	= $account;
+		$this->path[self::LEVEL_STRING]	= self::LOGS_DIR.'/string.log';
+		$this->path[self::LEVEL_NOTIFY]	= self::LOGS_DIR.'/notify.log';
+		$this->path[self::LEVEL_ERROR]	= self::LOGS_DIR.'/error.log';
+		$this->path[self::LEVEL_DEBUG]	= self::LOGS_DIR.'/debug.log';
+		$this->path[self::LEVEL_ELSE]	= self::LOGS_DIR.'/else.log';
+		$this->path[self::LEVEL_ALL]	= self::LOGS_DIR.'/all.log';
 		}
 	}
 class Errors
@@ -289,6 +315,10 @@ class Balance
 		$this->sLog	= new Log;
 		$this->UC	= new UserClass($account);
 		$this->Init();
+		if (!$this->sLog->CheckLogsPath())
+			{
+			$this->Error->Add('внимание! один или несколько файлов системы логгирование недоступен для записи.');
+			}
 		}
 	}
 class CharAuctionhouse extends Balance
@@ -531,6 +561,12 @@ class CharAuctionhouse extends Balance
 		}
 	public function CreateAuction($guid, $startbid, $expires/*возможные значения смотри  на http://docs.php.net/manual/en/function.strtotime.php*/, $buyout = 0)
 		{
+		$guid	= (int)$guid;
+		if (empty($guid))
+			{
+			$this->Error->Add('гуид персонажа пуст');
+			return false;
+			}
 		if (!$this->UC->IsItMyChar($guid))
 			{
 			$this->Error->Add('персонаж['.$guid.'] не принадлежит данному аккаунту['.$this->account.']');
@@ -538,6 +574,11 @@ class CharAuctionhouse extends Balance
 			}
 		$buyout		= (int)$buyout;
 		$startbid	= (int)$startbid;
+		if (empty($startbid))
+			{
+			$this->Error->Add('минимальная ставка пуста!');//может стоит разрешить либо ставку либо выкуп
+			return false;
+			}
 		if (!empty($buyout) && $buyout < $startbid)
 			{
 			$this->Error->Add('Цена выкупа меньше начальной ставки');
@@ -574,6 +615,7 @@ class CharAuctionhouse extends Balance
 			return true;
 			}
 		$this->Error->Add('ошибка создания аукциона rows=['.$rows.'], '.mysql_error());
+		echo $query;
 		return false;
 		}
 	public function IsItMyAuction($guid)
@@ -610,7 +652,7 @@ class CharAuctionhouse extends Balance
 		$rows	= mysql_affected_rows();
 		if ($rows == 1)
 			{
-			if (!$this->UC->UnlockChar($guid))
+			if ($this->UC->UnlockChar($guid))
 				{
 				$this->sLog->outString('аукцион на персонажа '.$guid.' отменен');
 				return true;
