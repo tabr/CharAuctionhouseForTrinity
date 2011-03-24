@@ -300,6 +300,8 @@ class CharAuctionhouse extends Balance
 		{
 		$query	= 'SELECT * FROM CharAuctionhouse WHERE DATEDIFF(created,expires)>0 AND lastbid=0';
 		$query	= mysql_query($query);
+		if (!$query)
+			return true;
 		while ($row = mysql_fetch_assoc($query))
 			{
 			/*персонажи, у которых вышел "срок реализации" и ставок по ним нет*/
@@ -385,6 +387,8 @@ class CharAuctionhouse extends Balance
 		$query	= mysql_query('SELECT * FROM CharAuctionhouse');
 #		echo mysql_error();
 		$return	= array();
+		if (!$query)
+			return $return;
 		while ($row = mysql_fetch_assoc($query))
 			{
 			$return[]=$row;
