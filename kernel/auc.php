@@ -646,6 +646,11 @@ class CharAuctionhouse extends Balance
 			$this->Error->Add('персонаж['.$guid.'] не принадлежит данному аккаунту['.$this->account.']');
 			return false;
 			}
+		if (!$this->AuctionExists($guid))
+			{
+			$this->Error->Add('аукцион на персонажа ['.$guid.'] не существует');
+			return false;
+			}
 		$query	= 'DELETE FROM CharAuctionhouse WHERE guid='.$guid.' AND lastbid=0';
 #		$query	= 'DELETE FROM CharAuctionhouse WHERE guid='.$guid;
 		mysql_query($query);
